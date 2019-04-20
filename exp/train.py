@@ -106,7 +106,7 @@ def get_dataset(dataset, args):
         train_dataset = gdata.COCODetection(root=MXNET_DATA_COCO, splits='instances_mini20k', use_crowd=False)
         val_dataset = gdata.COCODetection(root=MXNET_DATA_COCO, splits='instances_val2017', skip_empty=False)
         val_metric = COCODetectionMetric(
-            val_dataset, args.save_prefix + '_eval', cleanup=True,
+            val_dataset,os.path.join(args.save_dir, args.save_prefix + '_eval'), cleanup=True,
             data_shape=(args.data_shape, args.data_shape))
     else:
         raise NotImplementedError('Dataset: {} not implemented.'.format(dataset))
@@ -220,14 +220,17 @@ def train(net, train_data, val_data, eval_metric, ctx, args):
     cls_metrics = mx.metric.Loss('ClassLoss')
 
     # set up logger
-    logging.basicConfig()
+    logging.basicConfig(datefmt  = '%m-%d %A %H:%M:%S')
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s %(message)s')
     log_file_path = os.path.join(args.save_dir, args.save_prefix + '_train.log')
     log_dir = os.path.dirname(log_file_path)
     if log_dir and not os.path.exists(log_dir):
         os.makedirs(log_dir)
     fh = logging.FileHandler(log_file_path)
+    formatter = logging.Formatter('%(asctime)s %(message)s')
+    fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.info(args)
     logger.info('Start training from [Epoch {}]'.format(args.start_epoch))
@@ -297,7 +300,7 @@ def train(net, train_data, val_data, eval_metric, ctx, args):
             current_map = float(mean_ap[-1])
         else:
             current_map = 0.
-        save_params(net, best_map, current_map, epoch, args.save_interval, args.save_prefix)
+        save_params(net, best_map, current_map, epoch, args.save_interval, args.save_prefix, args.save_dir)
 
 if __name__ == '__main__':
     args = parse_args()
