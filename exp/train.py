@@ -106,7 +106,7 @@ def get_dataset(dataset, args):
         train_dataset = gdata.COCODetection(root=MXNET_DATA_COCO, splits='instances_mini20k', use_crowd=False)
         val_dataset = gdata.COCODetection(root=MXNET_DATA_COCO, splits='instances_val2017', skip_empty=False)
         val_metric = COCODetectionMetric(
-            val_dataset, args.save_prefix + '_eval', cleanup=True,
+            val_dataset,os.path.join(args.save_dir, args.save_prefix + '_eval'), cleanup=True,
             data_shape=(args.data_shape, args.data_shape))
     else:
         raise NotImplementedError('Dataset: {} not implemented.'.format(dataset))
