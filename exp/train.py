@@ -33,6 +33,8 @@ def parse_args():
                         help='Training mini-batch size')
     parser.add_argument('--dataset', type=str, default='voc',
                         help='Training dataset. Now support voc.')
+    parser.add_argument('--dataset-split', type=str, default='mini20k',
+                        help='Training dataset split, use mini20k, tranval, debug_200')                
     parser.add_argument('--num-workers', '-j', dest='num_workers', type=int,
                         default=4, help='Number of data workers, you can use larger '
                         'number to accelerate data loading, if you CPU and GPUs are powerful.')
@@ -103,7 +105,7 @@ def get_dataset(dataset, args):
             splits=[(2007, 'test')])
         val_metric = VOC07MApMetric(iou_thresh=0.5, class_names=val_dataset.classes)
     elif dataset.lower() == 'coco':
-        train_dataset = gdata.COCODetection(root=MXNET_DATA_COCO, splits='instances_mini20k', use_crowd=False)
+        train_dataset = gdata.COCODetection(root=MXNET_DATA_COCO, splits='instances_{}'.format(args.dataset_split), use_crowd=False)
         val_dataset = gdata.COCODetection(root=MXNET_DATA_COCO, splits='instances_val2017', skip_empty=False)
         val_metric = COCODetectionMetric(
             val_dataset,os.path.join(args.save_dir, args.save_prefix + '_eval'), cleanup=True,
@@ -220,17 +222,21 @@ def train(net, train_data, val_data, eval_metric, ctx, args):
     cls_metrics = mx.metric.Loss('ClassLoss')
 
     # set up logger
-    logging.basicConfig(datefmt  = '%m-%d %A %H:%M:%S')
+    def beijing(sec, what):
+        import datetime
+        beijing_time = datetime.datetime.now() + datetime.timedelta(hours=8)
+        return beijing_time.timetuple()
+
+    logging.basicConfig(format='%(asctime)s %(message)s', datefmt='[%m-%d] [%H:%M:%S]')
+    logging.Formatter.converter = beijing
+
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(message)s')
     log_file_path = os.path.join(args.save_dir, args.save_prefix + '_train.log')
     log_dir = os.path.dirname(log_file_path)
     if log_dir and not os.path.exists(log_dir):
         os.makedirs(log_dir)
     fh = logging.FileHandler(log_file_path)
-    formatter = logging.Formatter('%(asctime)s %(message)s')
-    fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.info(args)
     logger.info('Start training from [Epoch {}]'.format(args.start_epoch))
@@ -314,6 +320,11 @@ if __name__ == '__main__':
     # network
     net_name = '_'.join(('yolo3', args.network, args.dataset))
     args.save_prefix += net_name
+
+    #create working dir
+    if not os.path.isdir(args.save_dir):
+        os.makedirs(args.save_dir)
+
     # use sync bn if specified
     if args.syncbn and len(ctx) > 1:
         net = get_model(net_name, pretrained_base=True, norm_layer=gluon.contrib.nn.SyncBatchNorm,

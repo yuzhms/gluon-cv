@@ -5,6 +5,7 @@ import argparse
 import logging
 logging.basicConfig(level=logging.INFO)
 import time
+import os
 import numpy as np
 import mxnet as mx
 from tqdm import tqdm
@@ -37,6 +38,8 @@ def parse_args():
                         help='Load weights from previously saved parameters.')
     parser.add_argument('--save-prefix', type=str, default='',
                         help='Saving parameter prefix')
+    parser.add_argument('--save-dir', type=str, default='',
+                        help='Where to save trained model and logs')
     args = parser.parse_args()
     return args
 
@@ -47,7 +50,7 @@ def get_dataset(dataset, data_shape):
     elif dataset.lower() == 'coco':
         val_dataset = gdata.COCODetection(root=MXNET_DATA_COCO, splits='instances_val2017', skip_empty=False)
         val_metric = COCODetectionMetric(
-            val_dataset, args.save_prefix + '_eval', cleanup=True,
+            val_dataset, os.path.join(args.save_dir, args.save_prefix + '_eval'), cleanup=True,
             data_shape=(data_shape, data_shape))
     else:
         raise NotImplementedError('Dataset: {} not implemented.'.format(dataset))
